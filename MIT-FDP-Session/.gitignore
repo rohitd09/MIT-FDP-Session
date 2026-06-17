@@ -1,3 +1,4 @@
 .venv/
 .env
 __pycache__
+mit_aoe_db
