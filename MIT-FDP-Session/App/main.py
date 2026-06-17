@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from App.agents.bot import PDFBot
+from App.service.ta_workflow_service import TAWorkflowService
 from App.service.embedding_service import EmbeddingService
 
 app = FastAPI(title="MIT Assistant", version="0.1")
@@ -14,9 +14,10 @@ def test_app():
 
 @app.get("/run-llm/{query}")
 def run_llm(query):
-    bot = PDFBot()
-    response = bot.generate_response(query)
-    return {"AI Response": response}
+    workflow = TAWorkflowService()
+    result = workflow.run_ta_workflow(query)
+    
+    return {"Workflow Response": result}
 
 @app.get("/embed_pdf")
 def embed_pdf():
