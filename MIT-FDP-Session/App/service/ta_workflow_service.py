@@ -30,7 +30,7 @@ class TAWorkflowService:
 
         # Adding edges between the nodes
         agent_builder.add_edge(START, "bot_node")
-        agent_builder.add_condtional_edges(
+        agent_builder.add_conditional_edges(
             "bot_node",
             should_continue,
             {

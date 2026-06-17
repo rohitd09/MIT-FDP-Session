@@ -9,7 +9,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class EmbeddingService:
-    def __init__(self, collection_name, persist_directory):
+    def __init__(self, collection_name="teaching_assistant_collection", 
+                        persist_directory="./mit_aoe_db"):
         embeddings = HuggingFaceEmbeddings(
             model_name="BAAI/bge-small-en-v1.5",
             show_progress=True
