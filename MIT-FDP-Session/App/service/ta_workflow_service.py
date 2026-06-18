@@ -5,7 +5,7 @@ from typing_extensions import TypedDict, Annotated
 
 import operator
 
-from App.agents.bot import PDFBot
+from App.agents.ta_agent import TeachingAssistantAgent
 
 class MessageState(TypedDict):
     messages: Annotated[list[AnyMessage], operator.add]
@@ -25,8 +25,8 @@ class TAWorkflowService:
         agent_builder = StateGraph(MessageState)
 
         # Building Workflow Nodes
-        agent_builder.add_node("bot_node", PDFBot().call_llm)
-        agent_builder.add_node("tool_node", PDFBot().tool_node)
+        agent_builder.add_node("bot_node", TeachingAssistantAgent().call_llm)
+        agent_builder.add_node("tool_node", TeachingAssistantAgent().tool_node)
 
         # Adding edges between the nodes
         agent_builder.add_edge(START, "bot_node")

@@ -24,18 +24,15 @@ def retrieve_data_from_pdf(query):
     context = embedding_service.retrieve_from_pdf(query)
     return context
 
-# Building In-built LangChain Tool
-web_search = DuckDuckGoSearchRun()
-
-class PDFBot:
+class QuestionGenerationAgent:
     def __init__(self):
         self.llm = ChatGroq(
             model="openai/gpt-oss-20b",
             temperature=0.7,
-            max_tokens=256
+            max_tokens=512
         )
 
-        tools_list = [retrieve_data_from_pdf, web_search]
+        tools_list = [retrieve_data_from_pdf]
         self.llm_with_tools = self.llm.bind_tools(tools_list)
         self.tools_by_name = {tool.name: tool for tool in tools_list}
 
@@ -46,13 +43,24 @@ class PDFBot:
                     [
                         SystemMessage(
                     content="""
-                    You are a helful Teaching Assistant of C Programming language,
-                    at MIT AOE, Pune.
+                    You are a helful Question Generation Agent of C Programming language.
+                    You generate questions only using the curriculum of MIT AOE.
                     You have access to `retrieve_data_from_pdf` tool, which will let you get 
-                    content about MIT AOE's C programming course.
-                    Any information not available is to be attained using the `web_search` tool.
-                    Strictly maintain that you are a C programming teaching agent only. Do not answer 
-                    to any irrelevant questions. If asked, inform the user about your directive.
+                    content about MIT AOE's C programming course. You have to ensure that the questions
+                    you generate do not deviate from the syllabus. The questions are to be generated 
+                    only for the specific modules mentioned in the syllabus.
+                    Strictly maintain that you are a C programming question generation agent only.
+
+                    The user shall provide either a topic name, which you would use to generate exactly 3 questions.
+                    Or user shall provide just a number, in that case you shall think of C programming topics search for its
+                    contents in the curriculum and generate exactly the number of questions asked.
+
+                    Do not answer to any irrelevant questions. If asked, inform the user about your directive.
+
+                    Output Format: 
+                    1. [Question 1]
+                    2. [Question 2]
+                    3. [Question 3]
                     """
                         )
                     ]

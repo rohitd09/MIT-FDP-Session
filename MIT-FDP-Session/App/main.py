@@ -1,6 +1,8 @@
 from fastapi import FastAPI
+
 from App.service.ta_workflow_service import TAWorkflowService
 from App.service.embedding_service import EmbeddingService
+from App.service.homework_workflow_service import HomeworkWorkflowService
 
 app = FastAPI(title="MIT Assistant", version="0.1")
 
@@ -27,5 +29,11 @@ def embed_pdf():
     )
 
     embedding_service.process_pdf_document()
-    
     return {"message": "PDF embedded successfully"}
+
+@app.get("/generate-homework/{query}")
+def generate_homework(query):
+    workflow = HomeworkWorkflowService()
+    result = workflow.run_homework_workflow(query)
+    
+    return {"Workflow Response": result}
