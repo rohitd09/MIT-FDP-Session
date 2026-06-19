@@ -136,7 +136,7 @@ class ResearchAssistantAgent:
             MAX_CHARACTERS = 8000
             if len(content_string) > MAX_CHARACTERS:
                 content_string = (
-                    content_string[:MAX_CHARACTER] + 
+                    content_string[:MAX_CHARACTERS] + 
                     "\n\n[... OUTPUT TRUNCATATED to fit context limits....]"
                 )
 
