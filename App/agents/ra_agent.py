@@ -34,8 +34,8 @@ load_dotenv()
 class ResearchAssistantAgent:
     def __init__(self):
         self.llm = ChatGroq(
-            model="openai/gpt-oss-20b",
-            temperature=0.7,
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            temperature=0.2,
             max_tokens=1024
         )
 
@@ -132,7 +132,14 @@ class ResearchAssistantAgent:
             # else:
             #     content_string = str(observation)
             content_string = str(observation)
-            
+
+            MAX_CHARACTERS = 8000
+            if len(content_string) > MAX_CHARACTERS:
+                content_string = (
+                    content_string[:MAX_CHARACTER] + 
+                    "\n\n[... OUTPUT TRUNCATATED to fit context limits....]"
+                )
+
             result.append(
                 ToolMessage(
                     content=content_string,
