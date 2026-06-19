@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from App.service.ta_workflow_service import TAWorkflowService
 from App.service.embedding_service import EmbeddingService
 from App.service.homework_workflow_service import HomeworkWorkflowService
+from App.service.ra_workflow_service import RAWorkflowService
 
 app = FastAPI(title="MIT Assistant", version="0.1")
 
@@ -36,4 +37,11 @@ def generate_homework(query):
     workflow = HomeworkWorkflowService()
     result = workflow.run_homework_workflow(query)
     
+    return {"Workflow Response": result}
+
+@app.get("/generate_research_summary/{query}")
+def generate_research_summary(query):
+    workflow = RAWorkflowService()
+    result = workflow.run_ra_workflow(query)
+
     return {"Workflow Response": result}
