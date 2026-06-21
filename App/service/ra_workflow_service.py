@@ -21,12 +21,13 @@ def should_continue(state: MessageState):
     return "__end__"
 
 class RAWorkflowService:
-    def __init__(self):
+    def __init__(self, mcp_tools):
+        ra_agent = ResearchAssistantAgent(mcp_tools=mcp_tools)
         agent_builder = StateGraph(MessageState)
 
         # Building Workflow Nodes
-        agent_builder.add_node("research_node", ResearchAssistantAgent().call_llm)
-        agent_builder.add_node("research_tool_node", ResearchAssistantAgent().tool_node)
+        agent_builder.add_node("research_node", ra_agent.call_llm)
+        agent_builder.add_node("research_tool_node", ra_agent.tool_node)
 
         # Adding edges between the nodes
         agent_builder.add_edge(START, "research_node")
@@ -46,8 +47,10 @@ class RAWorkflowService:
     def run_ra_workflow(self, query):
         result = self.workflow.invoke(
             {
-                "messages": [HumanMessage(content=query)]
-            }
+                "messages": [HumanMessage(content=query)],
+                "llm_calls": 0
+            },
+            config={"recursion_limit": 6}
         )
 
         return result

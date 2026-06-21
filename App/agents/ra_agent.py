@@ -32,7 +32,7 @@ load_dotenv()
 # web_search = DuckDuckGoSearchRun()
 
 class ResearchAssistantAgent:
-    def __init__(self):
+    def __init__(self, mcp_tools):
         self.llm = ChatGroq(
             model="meta-llama/llama-4-scout-17b-16e-instruct",
             temperature=0.2,
@@ -43,42 +43,38 @@ class ResearchAssistantAgent:
         # self.llm_with_tools = self.llm.bind_tools(tools_list)
         # self.tools_by_name = {tool.name: tool for tool in tools_list}
 
-        self.tools_list = []
-        self.tools_by_name = {}
-        self.llm_with_tools = None
+        self.tools_list = mcp_tools
+        self .tools_by_name = {tool.name: tool for tool in self.tools_list}
+        self.llm_with_tools = self.llm.bind_tools(self.tools_list)
 
-        self._initialize_mcp_tools()
+    # def _initialize_mcp_tools(self):
+    #     mcp_server_url = "https://research-mcp-server-32764074468.asia-south1.run.app/"
 
-    def _initialize_mcp_tools(self):
-        mcp_server_url = "https://research-mcp-server-32764074468.asia-south1.run.app/mcp"
+    #     try:
+    #         async def fetch_tools():
+    #             client = MultiServerMCPClient({
+    #                 "research_server": {
+    #                     "transport": "http",
+    #                     "url": mcp_server_url
+    #                 }
+    #             })
 
-        try:
-            async def fetch_tools():
-                client = MultiServerMCPClient({
-                    "research_server": {
-                        "transport": "http",
-                        "url": mcp_server_url
-                    }
-                })
+    #             return await client.get_tools()
 
-                return await client.get_tools()
+    #         self.tools_list = asyncio.run(fetch_tools())
 
-            self.tools_list = asyncio.run(fetch_tools())
-
-            if not self.tools_list:
-                raise ValueError("MCP Server Connected, No tools returned")
+    #         if not self.tools_list:
+    #             raise ValueError("MCP Server Connected, No tools returned")
             
-            self .tools_by_name = {tool.name: tool for tool in self.tools_list}
-            self.llm_with_tools = self.llm.bind_tools(self.tools_list)
-            print(f"Connected to MCP Server, fetched {len(self.tools_list)} tools.")
+    #         self .tools_by_name = {tool.name: tool for tool in self.tools_list}
+    #         self.llm_with_tools = self.llm.bind_tools(self.tools_list)
+    #         print(f"Connected to MCP Server, fetched {len(self.tools_list)} tools.")
 
-        except Exception as e:
-            raise RuntimeError(
-                f"Could not initialize MCP Client at {mcp_server_url}.\n"
-                f"Reason: {e}"
-            )
-
-
+    #     except Exception as e:
+    #         raise RuntimeError(
+    #             f"Could not initialize MCP Client at {mcp_server_url}.\n"
+    #             f"Reason: {e}"
+    #         )
 
     def call_llm(self, state):        
         return {
