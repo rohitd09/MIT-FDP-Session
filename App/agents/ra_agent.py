@@ -50,13 +50,13 @@ class ResearchAssistantAgent:
         self._initialize_mcp_tools()
 
     def _initialize_mcp_tools(self):
-        mcp_server_url = "http://localhost:8080/sse/"
+        mcp_server_url = "https://research-mcp-server-32764074468.asia-south1.run.app/mcp"
 
         try:
             async def fetch_tools():
                 client = MultiServerMCPClient({
                     "research_server": {
-                        "transport": "sse",
+                        "transport": "http",
                         "url": mcp_server_url
                     }
                 })
