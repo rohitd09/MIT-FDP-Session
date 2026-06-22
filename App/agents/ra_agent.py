@@ -35,7 +35,7 @@ class ResearchAssistantAgent:
     def __init__(self, mcp_tools):
         self.llm = ChatGroq(
             model="meta-llama/llama-4-scout-17b-16e-instruct",
-            temperature=0.2,
+            temperature=0.00,
             max_tokens=1024
         )
 
@@ -46,6 +46,8 @@ class ResearchAssistantAgent:
         self.tools_list = mcp_tools
         self .tools_by_name = {tool.name: tool for tool in self.tools_list}
         self.llm_with_tools = self.llm.bind_tools(self.tools_list)
+
+        self.valid_tool_names = ", ".join([f"'{name}'" for name in self.tools_by_name.keys()])
 
     # def _initialize_mcp_tools(self):
     #     mcp_server_url = "https://research-mcp-server-32764074468.asia-south1.run.app/"
@@ -84,23 +86,18 @@ class ResearchAssistantAgent:
                         SystemMessage(
                     content="""
                     You are an expert Research Assistant.
-    
-                    Your task is to look for complex topics, reference from academic and online
-                    databases and generate high quality summaries that can help me start writing
-                    my literature review.
+
+                    Your task is to look for complex topics, reference from academic and online databases and generate high quality summaries that can help me start writing my literature review.
 
                     Follow this process:
+                    1. You have tools that can help with web searches. Use them to find links or extract detailed web content. Refer to blogs, articles & documentations.
+                    2. You have access to research repositories as well, use them to extract paper content and generate educated summaries.
+                    3. Compare all the found content, create technical breakdown, compare introductions, to provide the said output.
 
-                    1. You have tools that can help with web searches. Use them to find links or
-                    extract detailed web content. Refer to blogs, articles & documentations.
-
-                    2. You have access to research repositories as well, use them to extract paper 
-                    content and generate educated summaries.
-
-                    3. Compare all the found content, create technical breakdown, compare introductions,
-                    to provide the said output.
-
-                    Rely ONLY on your provided tools for real-world factual claims.
+                    CRITICAL TOOL CONSTRAINT RULES:
+                    - Rely ONLY on your provided tools for real-world factual claims.
+                    - You must ONLY execute a tool if its name EXACTLY matches one of these valid bound identifiers: [{self.valid_tool_names}].
+                    - DO NOT hallucinate or guess a short name like 'search_web' if the server provides an explicit schema prefix version instead.
                     """
                         )
                     ]
@@ -110,30 +107,30 @@ class ResearchAssistantAgent:
             "llm_calls": state.get('llm_calls', 0) + 1
         }
 
-    def tool_node(self, state):
+    async def tool_node(self, state):
         """Performs the tool calls"""
-
         result = []
 
-        for tool_call in state['messages'][-1].tool_calls:
+        # Added safety fallback in case the model managed to bypass Groq's validator but had no tool calls
+        last_message = state['messages'][-1]
+        if not hasattr(last_message, 'tool_calls') or not last_message.tool_calls:
+            return {"messages": result}
+
+        for tool_call in last_message.tool_calls:
 
             if 'self' in tool_call["args"]:
                 del tool_call["args"]['self']
 
             tool = self.tools_by_name[tool_call["name"]]
-            observation = asyncio.run(tool.ainvoke(tool_call["args"]))
+            observation = await tool.ainvoke(tool_call["args"])
 
-            # if isinstance(observation, list):
-            #     content_string = "\n".join(observation)
-            # else:
-            #     content_string = str(observation)
             content_string = str(observation)
 
             MAX_CHARACTERS = 8000
             if len(content_string) > MAX_CHARACTERS:
                 content_string = (
                     content_string[:MAX_CHARACTERS] + 
-                    "\n\n[... OUTPUT TRUNCATATED to fit context limits....]"
+                    "\n\n[... OUTPUT TRUNCATED to fit context limits....]"
                 )
 
             result.append(

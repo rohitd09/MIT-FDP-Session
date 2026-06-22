@@ -96,12 +96,12 @@ def generate_homework(query):
     return {"Workflow Response": result}
 
 @app.get("/generate_research_summary/{query}")
-def generate_research_summary(query: str):
+async def generate_research_summary(query: str):
     print("1. endpoint entered")
     tools = app.state.mcp_tools
     print(f"2. tools count = {len(tools)}")
     workflow = RAWorkflowService(mcp_tools=tools)
     print("3. workflow created")
-    result = workflow.run_ra_workflow(query)
+    result = await workflow.run_ra_workflow(query)
     print("4. workflow finished")
     return {"Workflow Response": result}

@@ -44,8 +44,8 @@ class RAWorkflowService:
 
         self.workflow = agent_builder.compile()
 
-    def run_ra_workflow(self, query):
-        result = self.workflow.invoke(
+    async def run_ra_workflow(self, query):
+        result = await self.workflow.ainvoke(
             {
                 "messages": [HumanMessage(content=query)],
                 "llm_calls": 0
