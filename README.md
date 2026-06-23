@@ -225,22 +225,111 @@ If you want to run your own tools server locally instead of connecting to Cloud 
 ## 7. Deployment & Production Considerations
 
 ### Containerization (Docker)
-Both the backend and the MCP server are ready for container deployment.
+The backend service is containerized using a multi-stage Docker build to keep the runtime image size minimal and secure. The multi-stage layout builds all dependencies in a Python builder environment first and then copies only the virtual environment and source code to the final runner image.
 
-*   **Build the Backend Container**:
-    ```bash
-    docker build -t mit-assistant-backend -f Dockerfile .
-    ```
-*   **Run the Backend Container**:
-    ```bash
-    docker run -p 8080:8080 --env-file .env mit-assistant-backend
-    ```
+#### A. Pre-requisites & File Structures
+1. **`.dockerignore`**: Ensure your `.dockerignore` excludes unnecessary files (like `.venv`, `__pycache__`, local database folders like `mit_aoe_db` unless pre-building, and `.env`) to keep the build context light.
+2. **Port Configuration**: The Dockerfile uses `ENV PORT=8080` by default, but binds the server to port `${PORT}`. This ensures compatibility with Google Cloud Run, which dynamically injects the `PORT` environment variable.
 
-### Cloud Deployment (e.g., Google Cloud Run)
-1. **Container Registry**: Push the Docker images to Google Artifact Registry (GAR) or Docker Hub.
-2. **Deploy Service**: Deploy to Google Cloud Run, which scale down to zero when idle.
-3. **Environment Variables**: Configure secrets (like `GROQ_API_KEY` and `TAVILY_API_KEY`) securely using Google Secret Manager mounted directly to the Cloud Run instances.
-4. **CORS / Domain Setup**: Add API Gateway or set up path routing if exposing to a frontend application.
+#### B. Build the Backend Container
+Run the following command in the `backend/` directory to build the image:
+```bash
+docker build -t mit-assistant-backend:latest -f Dockerfile .
+```
+
+#### C. Run the Container Locally
+To run the built container locally, you need to pass the environment variables (e.g., `GROQ_API_KEY`, `TAVILY_API_KEY`) from your `.env` file:
+```bash
+docker run -d \
+  -p 8080:8080 \
+  --name mit-backend \
+  --env-file .env \
+  mit-assistant-backend:latest
+```
+*   `-d`: Runs the container in detached (background) mode.
+*   `-p 8080:8080`: Maps port 8080 on your host system to port 8080 inside the container.
+*   `--env-file .env`: Automatically loads and sets variables from your local `.env` file.
+
+#### D. Verify the Container
+1. **Check Logs**:
+   ```bash
+   docker logs -f mit-backend
+   ```
+2. **Test Endpoint**:
+   Open [http://localhost:8080/](http://localhost:8080/) or check the interactive API documentation at [http://localhost:8080/docs](http://localhost:8080/docs).
+3. **Stop & Remove**:
+   ```bash
+   docker stop mit-backend
+   ```
+
+---
+
+### Cloud Deployment (Google Cloud Run)
+Google Cloud Run is the recommended platform for deploying this backend because it is serverless, auto-scales down to zero when inactive (reducing cost), and handles HTTPS automatically.
+
+#### Step 1: Pre-requisites & Initial Setup
+1. **Install gcloud CLI**: Install the Google Cloud SDK on your machine.
+2. **Authorize the SDK**:
+   ```bash
+   gcloud auth login
+   ```
+3. **Set your GCP Project ID**:
+   ```bash
+   gcloud config set project YOUR_PROJECT_ID
+   ```
+4. **Enable Required APIs**:
+   ```bash
+   gcloud services enable artifactregistry.googleapis.com run.googleapis.com
+   ```
+
+#### Step 2: Create Artifact Registry Repository
+Create a secure Docker repository in Artifact Registry to store your built image. Choose a region close to your users (e.g., `us-central1`, `asia-south1`):
+```bash
+gcloud artifacts repositories create mit-assistant-repo \
+    --repository-format=docker \
+    --location=asia-south1 \
+    --description="Docker repository for MIT Assistant"
+```
+
+#### Step 3: Configure Docker Authentication
+Configure Docker to authenticate with Google Artifact Registry before pushing images:
+```bash
+gcloud auth configure-docker asia-south1-docker.pkg.dev
+```
+
+#### Step 4: Tag & Push your Docker Image
+Tag the local container image with the Artifact Registry address format, then push it:
+```bash
+# Tag the image
+docker tag mit-assistant-backend:latest asia-south1-docker.pkg.dev/YOUR_PROJECT_ID/mit-assistant-repo/backend:latest
+
+# Push to Artifact Registry
+docker push asia-south1-docker.pkg.dev/YOUR_PROJECT_ID/mit-assistant-repo/backend:latest
+```
+
+#### Step 5: Deploy to Google Cloud Run
+Deploy the container from Artifact Registry to Google Cloud Run. Pass environment variables during deployment:
+```bash
+gcloud run deploy mit-assistant-backend \
+    --image=asia-south1-docker.pkg.dev/YOUR_PROJECT_ID/mit-assistant-repo/backend:latest \
+    --platform=managed \
+    --region=asia-south1 \
+    --allow-unauthenticated \
+    --set-env-vars="GROQ_API_KEY=your_groq_api_key,TAVILY_API_KEY=your_tavily_api_key"
+```
+*   `--allow-unauthenticated`: Makes the endpoint publicly accessible.
+*   `--set-env-vars`: Passes configuration variables dynamically. 
+
+> [!TIP]
+> **Production Secrets**: For production environments, do not expose keys in plain-text command arguments. Instead, store them in **Google Secret Manager** and mount them directly to your Cloud Run service using the `--set-secrets` flag.
+
+#### Step 6: Verify Deployment
+Once the deployment succeeds, the terminal will print a service URL (e.g., `https://mit-assistant-backend-xxxxxx.a.run.app`). 
+1. Run a test request:
+   ```bash
+   curl https://YOUR_SERVICE_URL/test-api
+   ```
+2. Update the frontend's Vite configurations or `App.jsx` to point to the new service URL.
 
 ---
 
