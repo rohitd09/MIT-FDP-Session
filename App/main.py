@@ -61,7 +61,17 @@ async def lifespan(app: FastAPI):
             await app.state.mcp_transport_cm.__aexit__(None, None, None)
         print("Shutting down application backend...")
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="MIT Assistant", version="0.1", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def root():
